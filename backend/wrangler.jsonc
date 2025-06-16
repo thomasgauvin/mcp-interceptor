@@ -6,15 +6,15 @@
   "durable_objects": {
     "bindings": [
       {
-        "name": "WEBSOCKET_HIBERNATION_SERVER",
-        "class_name": "WebSocketHibernationServer"
+        "name": "MCP_INTERCEPTOR",
+        "class_name": "MCPInterceptorDurableObject"
       }
     ]
   },
   "migrations": [
     {
       "tag": "v1",
-      "new_sqlite_classes": ["WebSocketHibernationServer"]
+      "new_sqlite_classes": ["MCPInterceptorDurableObject"]
     }
   ]
   // "compatibility_flags": [
