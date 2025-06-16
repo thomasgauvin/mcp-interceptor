@@ -1,6 +1,6 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
-  "name": "backend",
+  "name": "mcp-interceptor-api",
   "main": "src/index.ts",
   "compatibility_date": "2025-06-15",
   "durable_objects": {
