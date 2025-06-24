@@ -230,7 +230,7 @@ export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
                 <div className="mb-6">
           <a
             href="/"
-            className="inline-flex items-center px-4 py-2 bg-gray-100 text-black font-mono text-sm hover:bg-gray-800 transition-colors border border-gray-300"
+            className="inline-flex items-center px-4 py-2 bg-gray-100 text-black font-mono text-sm hover:bg-gray-200 transition-colors border border-gray-300"
           >
             <svg
               className="w-4 h-4 mr-2"
