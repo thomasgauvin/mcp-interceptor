@@ -11,6 +11,48 @@ export function InterceptorCreator({
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
 
+  const normalizeUrl = (url: string) => {
+    const trimmed = url.trim();
+    if (!trimmed.startsWith('http://') && !trimmed.startsWith('https://')) {
+      return `https://${trimmed}`;
+    }
+    return trimmed;
+  };
+
+  const validateMcpServer = async (url: string) => {
+    try {
+      const response = await fetch(
+        import.meta.env.VITE_HTTP_PROTOCOL +
+          "://" +
+          import.meta.env.VITE_API_HOST +
+          "/api/validate-mcp",
+        {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            targetUrl: url,
+          }),
+        }
+      );
+
+      const data = await response.json() as { valid?: boolean; error?: string };
+      
+      if (!response.ok) {
+        throw new Error(data.error || 'Server validation failed');
+      }
+
+      if (!data.valid) {
+        throw new Error(data.error || 'Server is not a valid MCP server');
+      }
+
+      return true;
+    } catch (err) {
+      throw new Error(err instanceof Error ? err.message : 'The URL does not appear to be a valid MCP server. Please check the URL and ensure the server supports the MCP protocol.');
+    }
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!targetUrl.trim()) return;
@@ -19,8 +61,14 @@ export function InterceptorCreator({
     setError("");
 
     try {
+      // Normalize URL (add https:// if missing)
+      const normalizedUrl = normalizeUrl(targetUrl);
+      
       // Validate URL format
-      new URL(targetUrl.trim());
+      new URL(normalizedUrl);
+
+      // Validate that it's an MCP server
+      await validateMcpServer(normalizedUrl);
 
       console.log(import.meta.env.VITE_API_HOST);
 
@@ -35,7 +83,7 @@ export function InterceptorCreator({
             "Content-Type": "application/json",
           },
           body: JSON.stringify({
-            targetUrl: targetUrl.trim(),
+            targetUrl: normalizedUrl,
           }),
         }
       );
@@ -61,93 +109,104 @@ export function InterceptorCreator({
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg shadow-lg p-6">
-      <div className="text-center mb-6">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-2">
-          Create MCP Interceptor
-        </h2>
-        <p className="text-gray-600 dark:text-gray-400">
-          Enter the URL of the MCP server you want to monitor
-        </p>
-      </div>
-
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label
-            htmlFor="targetUrl"
-            className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2"
-          >
-            MCP Server URL
-          </label>
-          <input
-            type="url"
-            id="targetUrl"
-            value={targetUrl}
-            onChange={(e) => setTargetUrl(e.target.value)}
-            placeholder="https://your-mcp-server.com"
-            className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-white
-                       placeholder-gray-500 dark:placeholder-gray-400
-                       focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            required
-            disabled={isLoading}
-          />
-          <p className="mt-1 text-xs text-gray-500 dark:text-gray-400">
-            This will be the target server that your proxy will forward requests
-            to
-          </p>
+    <div className="min-h-screen bg-gray-50 p-8">
+      <div className="max-w-12xl mx-auto">
+        {/* Header */}
+        <div className="mb-12 flex justify-center">
+          <div className="w-full max-w-lg">
+            <h1 className="text-4xl font-bold text-black mb-4 tracking-tight">
+              MCP INTERCEPTOR
+            </h1>
+            <p className="text-gray-600 text-lg font-mono uppercase" >
+              Create a proxy to monitor MCP requests made by agents like Claude
+            </p>
+            <p className="text-gray-400 text-md font-mono " >
+              Built with WebSockets and Cloudflare Durable Objects
+            </p>
+          </div>
         </div>
 
-        {error && (
-          <div className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-md p-3">
-            <p className="text-sm text-red-600 dark:text-red-400">{error}</p>
+        {/* Main Content */}
+        <div className="flex justify-center">
+          {/* Form */}
+          <div className="w-full max-w-lg">
+            <div className="border border-gray-300 bg-white">
+              {/* Terminal Header */}
+              <div className="border-b border-gray-300 px-4 py-3 bg-gray-100">
+                <span className="text-sm font-mono text-gray-600">CREATE INTERCEPTOR</span>
+              </div>
+
+              {/* Form Content */}
+              <div className="p-6">
+                {/* How it works */}
+                <div className="mb-8">
+                  <h2 className="text-lg font-bold text-black mb-4">HOW IT WORKS</h2>
+                  <div className="space-y-3 text-gray-600 text-sm">
+                    <div className="flex items-start">
+                      <span className="text-black font-mono mr-3">1.</span>
+                      <span className="font-mono">Create a unique proxy URL</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-black font-mono mr-3">2.</span>
+                      <span className="font-mono">Configure Claude or any agent client with the proxy URL</span>
+                    </div>
+                    <div className="flex items-start">
+                      <span className="text-black font-mono mr-3">3.</span>
+                      <span className="font-mono">Monitor requests in real-time</span>
+                    </div>
+                  </div>
+                </div>
+
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  <div>
+                    <label className="block text-sm font-mono text-gray-700 mb-3">
+                      MCP SERVER URL
+                    </label>
+                    <div className="relative">
+                      <input
+                        type="url"
+                        value={targetUrl}
+                        onChange={(e) => setTargetUrl(e.target.value)}
+                        placeholder="https://your-mcp-server.com"
+                        className="w-full px-4 py-3 border border-gray-300 font-mono text-sm
+                                  focus:outline-none focus:border-black bg-white
+                                  placeholder-gray-400"
+                        required
+                        disabled={isLoading}
+                      />
+                      <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
+                        <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {error && (
+                    <div className="border border-red-300 bg-red-50 p-4">
+                      <div className="text-red-800 text-sm font-mono">{error}</div>
+                    </div>
+                  )}
+
+                  <button
+                    type="submit"
+                    disabled={!targetUrl.trim() || isLoading}
+                    className="w-full bg-black text-white py-3 px-6 font-mono text-sm
+                              hover:bg-gray-800 disabled:opacity-50 disabled:cursor-not-allowed
+                              transition-colors duration-200"
+                  >
+                    {isLoading ? (
+                      <span className="flex items-center justify-center">
+                        <span className="mr-2">VALIDATING</span>
+                        <span className="animate-pulse">...</span>
+                      </span>
+                    ) : (
+                      "CREATE INTERCEPTOR"
+                    )}
+                  </button>
+                </form>
+              </div>
+            </div>
           </div>
-        )}
-
-        <button
-          type="submit"
-          disabled={!targetUrl.trim() || isLoading}
-          className="w-full px-4 py-2 bg-blue-500 text-white rounded-md hover:bg-blue-600 
-                     focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2
-                     disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
-        >
-          {isLoading ? (
-            <>
-              <svg
-                className="animate-spin -ml-1 mr-3 h-5 w-5 text-white"
-                xmlns="http://www.w3.org/2000/svg"
-                fill="none"
-                viewBox="0 0 24 24"
-              >
-                <circle
-                  className="opacity-25"
-                  cx="12"
-                  cy="12"
-                  r="10"
-                  stroke="currentColor"
-                  strokeWidth="4"
-                ></circle>
-                <path
-                  className="opacity-75"
-                  fill="currentColor"
-                  d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
-                ></path>
-              </svg>
-              Creating Interceptor...
-            </>
-          ) : (
-            "Create Interceptor"
-          )}
-        </button>
-      </form>
-
-      <div className="mt-6 text-xs text-gray-500 dark:text-gray-400">
-        <p className="font-medium mb-2">What happens next:</p>
-        <ul className="space-y-1">
-          <li>• You'll get a unique proxy URL to use with your MCP client</li>
-          <li>• You'll get a viewer URL to monitor requests in real-time</li>
-          <li>• All traffic will be logged and displayed in the viewer</li>
-        </ul>
+        </div>
       </div>
     </div>
   );
