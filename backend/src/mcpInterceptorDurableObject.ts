@@ -22,6 +22,42 @@ export class MCPInterceptorDurableObject extends DurableObject {
   private logs: InterceptorLog[] = [];
   private targetUrl: string | null = null;
 
+  constructor(ctx: DurableObjectState, env: any) {
+    super(ctx, env);
+    this.ctx = ctx;
+
+    console.log(`MCPInterceptorDurableObject initialized with ID: ${ctx.id}`);
+    console.log("Restoring existing WebSocket monitor sessions...");
+    
+    // Restore existing WebSocket connections from hibernation
+    const existingWebSockets = this.ctx.getWebSockets();
+    console.log(`Found ${existingWebSockets.length} existing WebSocket connections.`);
+
+    existingWebSockets.forEach((webSocket) => {
+      const meta = webSocket.deserializeAttachment();
+      if (meta) {
+        this.monitors.set(webSocket, {
+          interceptorId: meta.interceptorId,
+          connectedAt: meta.connectedAt,
+        });
+      }
+    });
+
+    // Initialize logs from storage if needed
+    this.initializeFromStorage();
+  }
+
+  private async initializeFromStorage(): Promise<void> {
+    try {
+      // Load target URL from storage
+      if (!this.targetUrl) {
+        this.targetUrl = (await this.ctx.storage.get("targetUrl")) || null;
+      }
+    } catch (error) {
+      console.error("Error initializing from storage:", error);
+    }
+  }
+
   // RPC method to set the target URL
   async setTargetUrl(
     targetUrl: string
@@ -59,7 +95,7 @@ export class MCPInterceptorDurableObject extends DurableObject {
 
   // RPC method to log a request/response
   async logRequest(log: InterceptorLog): Promise<void> {
-    this.addLog(log);
+    await this.addLog(log);
   }
 
   // RPC method to get the target URL
@@ -83,18 +119,25 @@ export class MCPInterceptorDurableObject extends DurableObject {
     const webSocketPair = new WebSocketPair();
     const [client, server] = Object.values(webSocketPair);
 
-    // Accept the WebSocket connection
+    // Use acceptWebSocket() for hibernation support instead of ws.accept()
+    // This informs the runtime that this WebSocket is hibernatable, so the 
+    // Durable Object can be evicted from memory during periods of inactivity
     this.ctx.acceptWebSocket(server);
 
     // Get interceptor ID from URL
     const url = new URL(request.url);
     const interceptorId = url.pathname.split("/")[2]; // Format is /monitor/interceptor-id
 
-    // Store monitor session
-    this.monitors.set(server, {
+    const sessionData = {
       interceptorId,
       connectedAt: Date.now(),
-    });
+    };
+
+    // Store monitor session
+    this.monitors.set(server, sessionData);
+
+    // Serialize attachment for hibernation recovery
+    server.serializeAttachment(sessionData);
 
     // Send existing logs to the new monitor
     server.send(
@@ -110,7 +153,8 @@ export class MCPInterceptorDurableObject extends DurableObject {
     });
   }
 
-  private addLog(log: InterceptorLog): void {
+  private async addLog(log: InterceptorLog): Promise<void> {
+    console.log("Adding log:", log);
     this.logs.push(log);
 
     // Keep only the last 1000 logs to prevent memory issues
@@ -162,6 +206,12 @@ export class MCPInterceptorDurableObject extends DurableObject {
     reason: string,
     wasClean: boolean
   ): Promise<void> {
+    console.log(`Monitor closed: ${code} ${reason} (wasClean: ${wasClean})`);
+    
+    // Clean up the monitor session
     this.monitors.delete(ws);
+    
+    // Close the WebSocket properly for hibernation
+    ws.close(code, "MCP Interceptor Durable Object is closing WebSocket");
   }
 }
