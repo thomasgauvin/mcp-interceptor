@@ -10,7 +10,7 @@
   "env": {
     "production": {
       "vars": {
-        "API_HOST": "mcp-interceptor-api.tgauvin.workers.dev"
+        "API_HOST": "mcp-interceptor-api.appsinprogress.com"
       }
     },
     "development": {
