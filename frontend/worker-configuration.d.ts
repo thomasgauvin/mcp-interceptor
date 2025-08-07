@@ -3,7 +3,7 @@
 // Runtime types generated with workerd@1.20250604.0 2025-04-04 
 declare namespace Cloudflare {
 	interface Env {
-		API_HOST: "mcp-interceptor-api.tgauvin.workers.dev" | "localhost:8787";
+		API_HOST: "mcp-interceptor-api.appsinprogress.com" | "localhost:8787";
 	}
 }
 interface Env extends Cloudflare.Env {}
