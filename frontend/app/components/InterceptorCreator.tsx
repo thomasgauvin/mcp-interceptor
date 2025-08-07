@@ -118,7 +118,7 @@ export function InterceptorCreator({
               MCP INTERCEPTOR
             </h1>
             <p className="text-gray-600 text-lg font-mono uppercase" >
-              Create a proxy to monitor MCP requests made by agents like Claude
+              Proxy to monitor MCP requests made by agents like Claude
             </p>
             <p className="text-gray-400 text-md font-mono " >
               Built with WebSockets and Cloudflare Durable Objects
@@ -177,6 +177,29 @@ export function InterceptorCreator({
                       <div className="absolute right-4 top-1/2 transform -translate-y-1/2">
                         <div className="w-2 h-2 bg-gray-400 rounded-full"></div>
                       </div>
+                    </div>
+                    
+                    {/* Test Server Section */}
+                    <div className="mt-4 p-4 border border-gray-200 bg-gray-50">
+                      <h3 className="text-xs font-mono font-bold text-gray-700 mb-2">TRY WITH TEST SERVER</h3>
+                      <p className="text-xs font-mono text-gray-600 mb-3">
+                        Use our demo weather MCP server to test the interceptor
+                      </p>
+                      <button
+                        type="button"
+                        onClick={() => setTargetUrl("https://random-weather-mcp.tgauvin.workers.dev/mcp")}
+                        className="text-xs font-mono text-blue-600 hover:text-blue-800 underline"
+                        disabled={isLoading}
+                      >
+                        Use: https://random-weather-mcp.tgauvin.workers.dev/mcp
+                      </button>
+                    </div>
+
+                    {/* Important Notice */}
+                    <div className="mt-3">
+                      <p className="text-xs font-mono text-gray-500">
+                        Note: Only supports Streamable HTTP transport (MCP 2025-03-26+)
+                      </p>
                     </div>
                   </div>
 

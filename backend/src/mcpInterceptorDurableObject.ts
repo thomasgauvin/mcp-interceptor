@@ -106,6 +106,16 @@ export class MCPInterceptorDurableObject extends DurableObject {
     return this.targetUrl;
   }
 
+  // RPC method to clear all logs
+  async clearLogs(): Promise<void> {
+    this.logs = [];
+    
+    // Broadcast to all monitors that logs have been cleared
+    this.broadcastToMonitors({
+      type: "logs_cleared",
+    });
+  }
+
   async fetch(request: Request): Promise<Response> {
     // Handle WebSocket connections for monitors only
     if (request.headers.get("upgrade") === "websocket") {

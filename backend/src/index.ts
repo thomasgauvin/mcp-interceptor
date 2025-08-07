@@ -83,6 +83,19 @@ app.get("/api/interceptors/:id", async (c) => {
   });
 });
 
+// Clear logs for an interceptor
+app.delete("/api/interceptors/:id/logs", async (c) => {
+  const interceptorId = c.req.param("id");
+
+  const durableObjectId = c.env.MCP_INTERCEPTOR.idFromName(interceptorId);
+  const durableObject = c.env.MCP_INTERCEPTOR.get(durableObjectId);
+
+  // Clear logs using RPC
+  await durableObject.clearLogs();
+
+  return c.json({ message: "Logs cleared successfully" });
+});
+
 // Proxy requests through the interceptor
 app.all("/proxy/:id/*", async (c) => {
   const interceptorId = c.req.param("id");
@@ -240,7 +253,7 @@ app.get("/ws/:viewer?", async (c) => {
 
   // Get the Durable Object - use room name to create isolated chat rooms
   const durableObjectId = c.env.WEBSOCKET_HIBERNATION_SERVER.idFromName(
-    `chat-room-${room}`
+    `chat-room-${viewer}`
   );
   const durableObject = c.env.WEBSOCKET_HIBERNATION_SERVER.get(durableObjectId);
 

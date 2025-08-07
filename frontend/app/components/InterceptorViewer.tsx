@@ -33,6 +33,7 @@ export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
   const [error, setError] = useState("");
   const [copiedUrl, setCopiedUrl] = useState<string | null>(null);
   const [selectedLog, setSelectedLog] = useState<InterceptorLog | null>(null);
+  const [isClearing, setIsClearing] = useState(false);
   const wsRef = useRef<WebSocket | null>(null);
   const logsEndRef = useRef<HTMLDivElement>(null);
 
@@ -90,20 +91,22 @@ export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
           } else if (data.type === "new_log") {
             setLogs((prev) => [...prev, data.log]);
             setTimeout(scrollToBottom, 100);
+          } else if (data.type === "logs_cleared") {
+            setLogs([]);
           }
         } catch (err) {
           console.error("Failed to parse WebSocket message:", err);
         }
       });
 
-      ws.addEventListener("close", () => {
+      ws.addEventListener("close", (event) => {
         setIsConnected(false);
         // Attempt to reconnect after 3 seconds
         setTimeout(connectWebSocket, 3000);
       });
 
       ws.addEventListener("error", (error) => {
-        console.error("WebSocket error:", error);
+        console.error("WebSocket error for interceptor:", interceptorId, error);
         setError("WebSocket connection failed");
       });
     };
@@ -124,6 +127,36 @@ export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
       setTimeout(() => setCopiedUrl(null), 2000);
     } catch (err) {
       console.error("Failed to copy:", err);
+    }
+  };
+
+  const clearLogs = async () => {
+    if (!info) return;
+    
+    setIsClearing(true);
+    try {
+      const response = await fetch(
+        `${
+          import.meta.env.VITE_HTTP_PROTOCOL +
+          "://" +
+          import.meta.env.VITE_API_HOST
+        }/api/interceptors/${interceptorId}/logs`,
+        {
+          method: 'DELETE',
+        }
+      );
+      
+      if (!response.ok) {
+        throw new Error('Failed to clear logs');
+      }
+      
+      // The logs will be cleared via WebSocket message, but we can also clear them locally
+      setLogs([]);
+    } catch (err) {
+      console.error('Failed to clear logs:', err);
+      setError('Failed to clear logs');
+    } finally {
+      setIsClearing(false);
     }
   };
 
@@ -300,7 +333,18 @@ export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
           <div className="border-b border-gray-300 px-6 py-4 bg-gray-100">
             <div className="flex items-center justify-between">
               <span className="text-lg font-mono text-gray-900">REQUEST RESPONSE LOG</span>
-              <span className="text-sm font-mono text-gray-600">{groupedLogs().length} PAIRS</span>
+              <div className="flex items-center space-x-4">
+                <span className="text-sm font-mono text-gray-600">{groupedLogs().length} PAIRS</span>
+                {logs.length > 0 && (
+                  <button
+                    onClick={clearLogs}
+                    disabled={isClearing}
+                    className="px-3 py-1 bg-gray-600 text-white font-mono text-xs hover:bg-gray-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isClearing ? "CLEARING..." : "CLEAR LOGS"}
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 
