@@ -6,6 +6,8 @@ import {
   Scripts,
   ScrollRestoration,
 } from "react-router";
+import * as Counterscale from "@counterscale/tracker";
+import { useEffect } from "react";
 
 import type { Route } from "./+types/root";
 import "./app.css";
@@ -42,6 +44,17 @@ export function Layout({ children }: { children: React.ReactNode }) {
 }
 
 export default function App() {
+  useEffect(() => {
+    // Initialize Counterscale and track a single pageview when the app loads
+    Counterscale.init({
+      siteId: "mcp-interceptor",
+      reporterUrl: "https://counterscale.tomsprojects.workers.dev/collect",
+    });
+    
+    // Track a single pageview when the app is loaded
+    Counterscale.trackPageview();
+  }, []);
+
   return <Outlet />;
 }
 
