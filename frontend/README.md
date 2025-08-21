@@ -1,16 +1,16 @@
-# Welcome to React Router!
+# MCP Interceptor Frontend
 
-A modern, production-ready template for building full-stack React applications using React Router.
+The web interface for creating and monitoring MCP (Model Context Protocol) interceptors. Built with React Router 7 and TypeScript.
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- 🚀 Server-side rendering with React Router
+- ⚡️ Hot Module Replacement (HMR) for fast development
+- 📦 Asset bundling and optimization with Vite
+- 🔄 Real-time monitoring with WebSockets
+- 🔒 TypeScript by default for type safety
+- 🎉 TailwindCSS for modern styling
+- 📊 Privacy-focused analytics with Counterscale
 
 ## Getting Started
 
