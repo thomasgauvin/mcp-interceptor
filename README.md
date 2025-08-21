@@ -2,6 +2,14 @@
 
 Debug MCP requests in real-time. Create a proxy URL, point your Claude (or any MCP client) at it, and watch the traffic flow.
 
+Home           |  Monitor
+:-------------------------:|:-------------------------:
+<img width="1478" height="853" alt="Frame 13" src="https://github.com/user-attachments/assets/5f2c3bdf-2c3e-4c50-a7c1-2823c12896c9" />  |  <img width="1478" height="853" alt="Frame 12" src="https://github.com/user-attachments/assets/0b0c2aa2-c3ff-4187-8d1d-a6dbcaa96b40" />
+
+
+
+
+
 ## What it does
 
 - Creates unique proxy URLs for your MCP servers
