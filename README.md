@@ -6,8 +6,7 @@ Home           |  Monitor
 :-------------------------:|:-------------------------:
 <img width="1478" height="853" alt="Frame 13" src="https://github.com/user-attachments/assets/5f2c3bdf-2c3e-4c50-a7c1-2823c12896c9" />  |  <img width="1478" height="853" alt="Frame 12" src="https://github.com/user-attachments/assets/0b0c2aa2-c3ff-4187-8d1d-a6dbcaa96b40" />
 
-
-
+Try it out here: [mcp-interceptor.appsinprogress.com](https://mcp-interceptor.appsinprogress.com/)
 
 
 ## What it does
