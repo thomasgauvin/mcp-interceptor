@@ -1,0 +1,14 @@
+name = "mcp-interceptor"
+main = "src/index.ts"
+compatibility_date = "2025-06-15"
+
+[[durable_objects.bindings]]
+name = "MCP_INTERCEPTOR"
+class_name = "MCPInterceptorDurableObject"
+
+[[migrations]]
+tag = "v1"
+new_sqlite_classes = ["MCPInterceptorDurableObject"]
+
+[observability]
+enabled = true
