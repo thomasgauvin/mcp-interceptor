@@ -48,4 +48,4 @@ cd backend && npm run deploy
 cd frontend && npm run deploy
 ```
 
-Built with Hono, React Router, and WebSockets. Only supports HTTP transport (MCP 2025-03-26+).
+Built with Hono, ReactRouter, and WebSockets. Only supports HTTP transport (MCP 2025-03-26+).
