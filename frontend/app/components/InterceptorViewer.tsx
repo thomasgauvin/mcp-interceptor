@@ -226,7 +226,14 @@ export function InterceptorViewer({ interceptorId, authHeaders }: InterceptorVie
       }
     });
     
-    return groups;
+    // Filter out pairs where both request and response have empty bodies
+    return groups.filter(group => {
+      const reqBody = group.request.body?.trim();
+      const resBody = group.response?.body?.trim();
+      const isRequestEmpty = !reqBody || reqBody === '{}' || reqBody === '';
+      const isResponseEmpty = !resBody || resBody === '{}' || resBody === '';
+      return !(isRequestEmpty && isResponseEmpty);
+    });
   };
 
   if (error && !info) {

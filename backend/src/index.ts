@@ -155,8 +155,11 @@ app.all("/proxy/:id/*", async (c) => {
     body: requestBody,
   };
 
-  // Log the request using RPC
-  await durableObject.logRequest(requestLog);
+  // Log the request using RPC (skip if body is empty/missing - not useful)
+  const isRequestBodyEmpty = !requestBody || requestBody.trim() === '' || requestBody.trim() === '{}';
+  if (!isRequestBodyEmpty) {
+    await durableObject.logRequest(requestLog);
+  }
 
   try {
     // Create the target URL by replacing the host and preserving path/query
@@ -210,8 +213,11 @@ app.all("/proxy/:id/*", async (c) => {
       body: responseBody,
     };
 
-    // Log the response using RPC
-    await durableObject.logRequest(responseLog);
+    // Log the response using RPC (skip if both request and response bodies are empty)
+    const isResponseBodyEmpty = !responseBody || responseBody.trim() === '' || responseBody.trim() === '{}';
+    if (!(isRequestBodyEmpty && isResponseBodyEmpty)) {
+      await durableObject.logRequest(responseLog);
+    }
 
     return response;
   } catch (error) {
