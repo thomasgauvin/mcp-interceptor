@@ -264,8 +264,8 @@ app.get("/ws/:viewer?", async (c) => {
 // Validate MCP server endpoint
 app.post("/api/validate-mcp", async (c) => {
   try {
-    const body = (await c.req.json()) as { targetUrl?: string };
-    const { targetUrl } = body;
+    const body = (await c.req.json()) as { targetUrl?: string; headers?: Record<string, string> };
+    const { targetUrl, headers: customHeaders } = body;
 
     console.log("Validating MCP server for URL:", targetUrl);
 
@@ -295,7 +295,8 @@ app.post("/api/validate-mcp", async (c) => {
           'Content-Type': 'application/json',
           'Accept': 'application/json, text/event-stream',
           'Accept-Language': '*',
-          'User-Agent': 'node'
+          'User-Agent': 'node',
+          ...(customHeaders || {}),
         },
         body: JSON.stringify({
           jsonrpc: '2.0',

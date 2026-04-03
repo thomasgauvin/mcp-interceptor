@@ -20,9 +20,11 @@ export function loader({ context }: Route.LoaderArgs) {
 export default function Home({ loaderData }: Route.ComponentProps) {
   const navigate = useNavigate();
 
-  const handleCreateInterceptor = (interceptorData: any) => {
-    // Navigate to the monitor viewer
-    navigate(`/monitor/${interceptorData.interceptorId}`);
+  const handleCreateInterceptor = (interceptorData: any, headers?: Record<string, string>) => {
+    // Navigate to the monitor viewer, passing auth headers via client-side state only
+    navigate(`/monitor/${interceptorData.interceptorId}`, {
+      state: { authHeaders: headers },
+    });
   };
 
   return (

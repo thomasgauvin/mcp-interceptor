@@ -1,5 +1,5 @@
 import type { Route } from "./+types/monitor";
-import { useParams } from "react-router";
+import { useParams, useLocation } from "react-router";
 import { InterceptorViewer } from "../components/InterceptorViewer";
 
 export function meta({ params }: Route.MetaArgs) {
@@ -18,13 +18,15 @@ export function loader({ params }: Route.LoaderArgs) {
 
 export default function MonitorPage({ loaderData }: Route.ComponentProps) {
   const { interceptorId } = loaderData;
+  const location = useLocation();
+  const authHeaders = (location.state as { authHeaders?: Record<string, string> } | null)?.authHeaders;
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
       <div className="container mx-auto px-4 py-8">
 
 
-        <InterceptorViewer interceptorId={interceptorId} />
+        <InterceptorViewer interceptorId={interceptorId} authHeaders={authHeaders} />
       </div>
     </div>
   );

@@ -1,7 +1,12 @@
 import { useState } from "react";
 
+interface HeaderEntry {
+  key: string;
+  value: string;
+}
+
 interface InterceptorCreatorProps {
-  onCreateInterceptor: (interceptorData: any) => void;
+  onCreateInterceptor: (interceptorData: any, headers?: Record<string, string>) => void;
 }
 
 export function InterceptorCreator({
@@ -10,6 +15,10 @@ export function InterceptorCreator({
   const [targetUrl, setTargetUrl] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
+  const [showHeaders, setShowHeaders] = useState(false);
+  const [headerEntries, setHeaderEntries] = useState<HeaderEntry[]>([
+    { key: "", value: "" },
+  ]);
 
   const normalizeUrl = (url: string) => {
     const trimmed = url.trim();
@@ -17,6 +26,36 @@ export function InterceptorCreator({
       return `https://${trimmed}`;
     }
     return trimmed;
+  };
+
+  const getCustomHeaders = (): Record<string, string> | undefined => {
+    const headers: Record<string, string> = {};
+    for (const entry of headerEntries) {
+      const key = entry.key.trim();
+      const value = entry.value.trim();
+      if (key && value) {
+        headers[key] = value;
+      }
+    }
+    return Object.keys(headers).length > 0 ? headers : undefined;
+  };
+
+  const updateHeaderEntry = (index: number, field: "key" | "value", value: string) => {
+    const updated = [...headerEntries];
+    updated[index] = { ...updated[index], [field]: value };
+    setHeaderEntries(updated);
+  };
+
+  const addHeaderEntry = () => {
+    setHeaderEntries([...headerEntries, { key: "", value: "" }]);
+  };
+
+  const removeHeaderEntry = (index: number) => {
+    if (headerEntries.length <= 1) {
+      setHeaderEntries([{ key: "", value: "" }]);
+      return;
+    }
+    setHeaderEntries(headerEntries.filter((_, i) => i !== index));
   };
 
   const validateMcpServer = async (url: string) => {
@@ -33,6 +72,7 @@ export function InterceptorCreator({
           },
           body: JSON.stringify({
             targetUrl: url,
+            headers: getCustomHeaders(),
           }),
         }
       );
@@ -94,7 +134,7 @@ export function InterceptorCreator({
       }
 
       const interceptorData = await response.json();
-      onCreateInterceptor(interceptorData);
+      onCreateInterceptor(interceptorData, getCustomHeaders());
     } catch (err) {
       if (err instanceof TypeError && err.message.includes("Invalid URL")) {
         setError("Please enter a valid URL");
@@ -201,6 +241,69 @@ export function InterceptorCreator({
                         Note: Only supports Streamable HTTP transport (MCP 2025-03-26+)
                       </p>
                     </div>
+                  </div>
+
+                  {/* Auth Headers Section */}
+                  <div>
+                    <button
+                      type="button"
+                      onClick={() => setShowHeaders(!showHeaders)}
+                      className="flex items-center text-sm font-mono text-gray-600 hover:text-gray-900"
+                      disabled={isLoading}
+                    >
+                      <span className="mr-2 font-mono text-xs">{showHeaders ? "▼" : "▶"}</span>
+                      AUTH HEADERS (OPTIONAL)
+                    </button>
+
+                    {showHeaders && (
+                      <div className="mt-3 p-4 border border-gray-200 bg-gray-50">
+                        <p className="text-xs font-mono text-gray-500 mb-3">
+                          Add headers for secured MCP servers. These are used for validation only and are never stored.
+                        </p>
+                        <div className="space-y-2">
+                          {headerEntries.map((entry, index) => (
+                            <div key={index} className="flex items-center space-x-2">
+                              <input
+                                type="text"
+                                value={entry.key}
+                                onChange={(e) => updateHeaderEntry(index, "key", e.target.value)}
+                                placeholder="Header name"
+                                className="flex-1 px-3 py-2 border border-gray-300 font-mono text-xs
+                                          focus:outline-none focus:border-black bg-white
+                                          placeholder-gray-400"
+                                disabled={isLoading}
+                              />
+                              <input
+                                type="text"
+                                value={entry.value}
+                                onChange={(e) => updateHeaderEntry(index, "value", e.target.value)}
+                                placeholder="Value"
+                                className="flex-1 px-3 py-2 border border-gray-300 font-mono text-xs
+                                          focus:outline-none focus:border-black bg-white
+                                          placeholder-gray-400"
+                                disabled={isLoading}
+                              />
+                              <button
+                                type="button"
+                                onClick={() => removeHeaderEntry(index)}
+                                className="px-2 py-2 text-gray-400 hover:text-red-600 font-mono text-xs"
+                                disabled={isLoading}
+                              >
+                                ✕
+                              </button>
+                            </div>
+                          ))}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={addHeaderEntry}
+                          className="mt-2 text-xs font-mono text-gray-600 hover:text-gray-900"
+                          disabled={isLoading}
+                        >
+                          + ADD HEADER
+                        </button>
+                      </div>
+                    )}
                   </div>
 
                   {error && (

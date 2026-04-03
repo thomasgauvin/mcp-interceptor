@@ -24,9 +24,10 @@ interface InterceptorInfo {
 
 interface InterceptorViewerProps {
   interceptorId: string;
+  authHeaders?: Record<string, string>;
 }
 
-export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
+export function InterceptorViewer({ interceptorId, authHeaders }: InterceptorViewerProps) {
   const [info, setInfo] = useState<InterceptorInfo | null>(null);
   const [logs, setLogs] = useState<InterceptorLog[]>([]);
   const [isConnected, setIsConnected] = useState(false);
@@ -325,6 +326,39 @@ export function InterceptorViewer({ interceptorId }: InterceptorViewerProps) {
                 </p>
               </div>
             </div>
+
+            {/* Auth Headers - only shown when passed via navigation state */}
+            {authHeaders && Object.keys(authHeaders).length > 0 && (
+              <div>
+                <div className="flex items-center justify-between mb-3">
+                  <h3 className="text-sm font-mono font-bold text-gray-900">AUTH HEADERS</h3>
+                  <div className="flex items-center space-x-2">
+                    <span className="text-xs font-mono text-yellow-700 bg-yellow-50 border border-yellow-300 px-2 py-1">
+                      CLIENT-SIDE ONLY — NOT STORED
+                    </span>
+                    <button
+                      onClick={() => copyToClipboard(JSON.stringify(authHeaders, null, 2), "headers")}
+                      className="px-3 py-1 bg-gray-900 text-white font-mono text-xs hover:bg-gray-800 transition-colors"
+                    >
+                      {copiedUrl === "headers" ? "COPIED" : "COPY JSON"}
+                    </button>
+                  </div>
+                </div>
+                <div className="border border-gray-300 bg-gray-50 p-3">
+                  <div className="space-y-1">
+                    {Object.entries(authHeaders).map(([key, value]) => (
+                      <div key={key} className="flex font-mono text-xs">
+                        <span className="text-gray-900 font-bold mr-2">{key}:</span>
+                        <span className="text-gray-600 break-all">{value}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-xs font-mono text-gray-500 mt-2">
+                  These headers were used for validation. Add them to your MCP client config if the server requires auth.
+                </p>
+              </div>
+            )}
           </div>
         </div>
 
