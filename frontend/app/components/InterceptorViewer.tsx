@@ -333,8 +333,8 @@ export function InterceptorViewer({ interceptorId, authHeaders }: InterceptorVie
                 <div className="flex items-center justify-between mb-3">
                   <h3 className="text-sm font-mono font-bold text-gray-900">AUTH HEADERS</h3>
                   <div className="flex items-center space-x-2">
-                    <span className="text-xs font-mono text-yellow-700 bg-yellow-50 border border-yellow-300 px-2 py-1">
-                      CLIENT-SIDE ONLY — NOT STORED
+                    <span className="text-xs font-mono text-green-700 bg-green-50 border border-green-300 px-2 py-1">
+                      STORED — INJECTED INTO PROXIED REQUESTS
                     </span>
                     <button
                       onClick={() => copyToClipboard(JSON.stringify(authHeaders, null, 2), "headers")}
@@ -355,7 +355,7 @@ export function InterceptorViewer({ interceptorId, authHeaders }: InterceptorVie
                   </div>
                 </div>
                 <p className="text-xs font-mono text-gray-500 mt-2">
-                  These headers were used for validation. Add them to your MCP client config if the server requires auth.
+                  These headers are automatically injected into all proxied requests to the target MCP server.
                 </p>
               </div>
             )}

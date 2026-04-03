@@ -21,6 +21,7 @@ export class MCPInterceptorDurableObject extends DurableObject {
   private monitors = new Map<WebSocket, MonitorSession>();
   private logs: InterceptorLog[] = [];
   private targetUrl: string | null = null;
+  private customHeaders: Record<string, string> | null = null;
 
   constructor(ctx: DurableObjectState, env: any) {
     super(ctx, env);
@@ -53,6 +54,10 @@ export class MCPInterceptorDurableObject extends DurableObject {
       if (!this.targetUrl) {
         this.targetUrl = (await this.ctx.storage.get("targetUrl")) || null;
       }
+      // Load custom headers from storage
+      if (!this.customHeaders) {
+        this.customHeaders = (await this.ctx.storage.get("customHeaders")) || null;
+      }
     } catch (error) {
       console.error("Error initializing from storage:", error);
     }
@@ -73,6 +78,23 @@ export class MCPInterceptorDurableObject extends DurableObject {
     } catch {
       return { success: false, error: "Invalid URL format" };
     }
+  }
+
+  // RPC method to set custom headers for proxying
+  async setCustomHeaders(
+    headers: Record<string, string>
+  ): Promise<{ success: boolean }> {
+    this.customHeaders = headers;
+    await this.ctx.storage.put("customHeaders", headers);
+    return { success: true };
+  }
+
+  // RPC method to get custom headers
+  async getCustomHeaders(): Promise<Record<string, string> | null> {
+    if (!this.customHeaders) {
+      this.customHeaders = (await this.ctx.storage.get("customHeaders")) || null;
+    }
+    return this.customHeaders;
   }
 
   // RPC method to get interceptor info

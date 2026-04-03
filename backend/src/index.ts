@@ -22,8 +22,8 @@ app.get("/api", (c) => {
 // Create a new MCP interceptor
 app.post("/api/interceptors", async (c) => {
   try {
-    const body = (await c.req.json()) as { targetUrl?: string };
-    const { targetUrl } = body;
+    const body = (await c.req.json()) as { targetUrl?: string; headers?: Record<string, string> };
+    const { targetUrl, headers: customHeaders } = body;
 
     if (!targetUrl || typeof targetUrl !== "string") {
       return c.json({ error: "Target URL is required" }, 400);
@@ -48,6 +48,11 @@ app.post("/api/interceptors", async (c) => {
 
     if (!result.success) {
       return c.json({ error: result.error }, 400);
+    }
+
+    // Store custom headers if provided
+    if (customHeaders && typeof customHeaders === "object" && Object.keys(customHeaders).length > 0) {
+      await durableObject.setCustomHeaders(customHeaders);
     }
 
     // Return the interceptor info
@@ -163,10 +168,18 @@ app.all("/proxy/:id/*", async (c) => {
 
     console.log("Proxying request to:", proxyUrl.toString());
 
-    // Create new request to target
+    // Create new request to target, injecting stored auth headers
+    const proxyHeaders = new Headers(request.headers);
+    const customHeaders = await durableObject.getCustomHeaders();
+    if (customHeaders) {
+      for (const [key, value] of Object.entries(customHeaders)) {
+        proxyHeaders.set(key, value);
+      }
+    }
+
     const proxyRequest = new Request(proxyUrl.toString(), {
       method: request.method,
-      headers: request.headers,
+      headers: proxyHeaders,
       body: request.body,
     });
 
@@ -267,9 +280,12 @@ app.post("/api/validate-mcp", async (c) => {
     const body = (await c.req.json()) as { targetUrl?: string; headers?: Record<string, string> };
     const { targetUrl, headers: customHeaders } = body;
 
-    console.log("Validating MCP server for URL:", targetUrl);
+    console.log("[validate-mcp] Received validation request");
+    console.log("[validate-mcp] Target URL:", targetUrl);
+    console.log("[validate-mcp] Custom headers provided:", customHeaders ? Object.keys(customHeaders) : "none");
 
     if (!targetUrl || typeof targetUrl !== "string") {
+      console.log("[validate-mcp] Rejected: Target URL is missing or not a string");
       return c.json({ error: "Target URL is required" }, 400);
     }
 
@@ -277,15 +293,20 @@ app.post("/api/validate-mcp", async (c) => {
     let url: URL;
     try {
       url = new URL(targetUrl);
+      console.log("[validate-mcp] Parsed URL - protocol:", url.protocol, "host:", url.host, "pathname:", url.pathname);
     } catch {
+      console.log("[validate-mcp] Rejected: Invalid URL format for:", targetUrl);
       return c.json({ error: "Invalid URL format" }, 400);
     }
 
     // Security checks to prevent abuse as arbitrary proxy
     // Only allow HTTP/HTTPS protocols
     if (!["http:", "https:"].includes(url.protocol)) {
+      console.log("[validate-mcp] Rejected: Disallowed protocol:", url.protocol);
       return c.json({ error: "Only HTTP and HTTPS protocols are allowed" }, 400);
     }
+
+    console.log("[validate-mcp] URL validation passed, sending MCP initialize request...");
 
     // Validate that it's an MCP server by sending an initialize request
     try {
@@ -320,10 +341,11 @@ app.post("/api/validate-mcp", async (c) => {
         signal: AbortSignal.timeout(10000), // 10 second timeout
       });
 
-      console.log("MCP server response status:", response.status);
-      console.log("MCP server response headers:", Object.fromEntries(response.headers.entries()));
+      console.log("[validate-mcp] Response received - status:", response.status, response.statusText);
+      console.log("[validate-mcp] Response headers:", JSON.stringify(Object.fromEntries(response.headers.entries())));
 
       if (!response.ok) {
+        console.log("[validate-mcp] Rejected: Non-OK response status:", response.status, response.statusText);
         return c.json({
           error: 'Server did not respond properly to MCP initialize request',
           valid: false
@@ -331,15 +353,17 @@ app.post("/api/validate-mcp", async (c) => {
       }
 
       const contentType = response.headers.get('content-type') || '';
-      console.log("Content-Type:", contentType);
+      console.log("[validate-mcp] Content-Type:", contentType);
 
       let data;
       
       // Handle Server-Sent Events or streaming response
       if (contentType.includes('text/event-stream') || contentType.includes('text/plain')) {
+        console.log("[validate-mcp] Handling streaming response (SSE or text/plain)");
         // Read the stream properly
         const reader = response.body?.getReader();
         if (!reader) {
+          console.log("[validate-mcp] Rejected: Unable to get reader from streaming response body");
           return c.json({
             error: 'Unable to read streaming response',
             valid: false
@@ -353,16 +377,21 @@ app.post("/api/validate-mcp", async (c) => {
         try {
           while (true) {
             const { done, value } = await reader.read();
-            if (done) break;
+            if (done) {
+              console.log("[validate-mcp] Stream ended (done=true)");
+              break;
+            }
 
-            buffer += decoder.decode(value, { stream: true });
+            const chunk = decoder.decode(value, { stream: true });
+            console.log("[validate-mcp] Stream chunk received, length:", chunk.length);
+            buffer += chunk;
             
             // Process complete lines
             const lines = buffer.split('\n');
             buffer = lines.pop() || ''; // Keep incomplete line in buffer
 
             for (const line of lines) {
-              console.log("Stream line:", line);
+              console.log("[validate-mcp] Stream line:", line);
               
               // Handle SSE format
               if (line.startsWith('data: ')) {
@@ -370,9 +399,11 @@ app.post("/api/validate-mcp", async (c) => {
                 if (jsonString && jsonString !== '[DONE]') {
                   try {
                     jsonData = JSON.parse(jsonString);
+                    console.log("[validate-mcp] Parsed SSE JSON data successfully");
                     await reader.cancel(); // Stop reading once we get valid data
                     break;
                   } catch (e) {
+                    console.log("[validate-mcp] Failed to parse SSE data line as JSON:", jsonString);
                     continue;
                   }
                 }
@@ -381,9 +412,11 @@ app.post("/api/validate-mcp", async (c) => {
               else if (line.trim().startsWith('{')) {
                 try {
                   jsonData = JSON.parse(line.trim());
+                  console.log("[validate-mcp] Parsed direct JSON line successfully");
                   await reader.cancel();
                   break;
                 } catch (e) {
+                  console.log("[validate-mcp] Failed to parse direct JSON line:", line.trim().substring(0, 100));
                   continue;
                 }
               }
@@ -396,6 +429,7 @@ app.post("/api/validate-mcp", async (c) => {
         }
         
         if (!jsonData) {
+          console.log("[validate-mcp] Rejected: No valid JSON data found in stream. Remaining buffer:", buffer.substring(0, 200));
           return c.json({
             error: 'Server returned streaming format but no valid JSON data found',
             valid: false
@@ -404,10 +438,13 @@ app.post("/api/validate-mcp", async (c) => {
         
         data = jsonData;
       } else {
+        console.log("[validate-mcp] Handling regular JSON response");
         // Handle regular JSON response
         try {
           data = await response.json();
+          console.log("[validate-mcp] Parsed JSON response successfully");
         } catch (e) {
+          console.log("[validate-mcp] Rejected: Failed to parse response as JSON:", e);
           return c.json({
             error: 'Server response is not valid JSON',
             valid: false
@@ -415,21 +452,30 @@ app.post("/api/validate-mcp", async (c) => {
         }
       }
 
-      console.log("Parsed data:", data);
+      console.log("[validate-mcp] Parsed response data:", JSON.stringify(data));
 
       // Validate MCP response structure
+      console.log("[validate-mcp] Validating MCP response structure...");
+      console.log("[validate-mcp] Has 'result' key:", data && typeof data === 'object' && 'result' in data);
+      if (data?.result) {
+        console.log("[validate-mcp] result type:", typeof data.result);
+        console.log("[validate-mcp] Has 'protocolVersion':", typeof data.result === 'object' && 'protocolVersion' in data.result);
+      }
+
       if (!data ||
           typeof data !== 'object' ||
           !('result' in data) ||
           !data.result ||
           typeof data.result !== 'object' ||
           !('protocolVersion' in data.result)) {
+        console.log("[validate-mcp] Rejected: Invalid MCP response structure. Keys present:", data ? Object.keys(data) : "null");
         return c.json({
           error: 'Server did not return a valid MCP initialize response',
           valid: false
         }, 400);
       }
 
+      console.log("[validate-mcp] ✅ Validation successful! Protocol version:", data.result.protocolVersion);
       return c.json({
         valid: true,
         message: 'MCP server validation successful',
@@ -438,13 +484,16 @@ app.post("/api/validate-mcp", async (c) => {
 
     } catch (error) {
       if (error instanceof Error && error.name === 'TimeoutError') {
+        console.log("[validate-mcp] Rejected: Request timed out after 10s for URL:", targetUrl);
         return c.json({
           error: 'MCP server validation timed out - server may be unresponsive',
           valid: false
         }, 400);
       }
 
-      console.error("Error validating MCP server:", error);
+      console.error("[validate-mcp] Unexpected error during validation:", error);
+      console.error("[validate-mcp] Error type:", error instanceof Error ? error.constructor.name : typeof error);
+      console.error("[validate-mcp] Error message:", error instanceof Error ? error.message : String(error));
 
       return c.json({
         error: 'The URL does not appear to be a valid MCP server. Please check the URL and ensure the server supports the MCP protocol.',
@@ -452,6 +501,7 @@ app.post("/api/validate-mcp", async (c) => {
       }, 400);
     }
   } catch (error) {
+    console.error("[validate-mcp] Failed to parse request body as JSON:", error);
     return c.json({ error: "Invalid JSON" }, 400);
   }
 });

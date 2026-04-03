@@ -124,6 +124,7 @@ export function InterceptorCreator({
           },
           body: JSON.stringify({
             targetUrl: normalizedUrl,
+            headers: getCustomHeaders(),
           }),
         }
       );
@@ -258,7 +259,7 @@ export function InterceptorCreator({
                     {showHeaders && (
                       <div className="mt-3 p-4 border border-gray-200 bg-gray-50">
                         <p className="text-xs font-mono text-gray-500 mb-3">
-                          Add headers for secured MCP servers. These are used for validation only and are never stored.
+                          Add headers for secured MCP servers. These will be stored and injected into all proxied requests.
                         </p>
                         <div className="space-y-2">
                           {headerEntries.map((entry, index) => (
